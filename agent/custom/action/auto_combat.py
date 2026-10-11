@@ -526,69 +526,16 @@ class AutoCombat(CustomAction):
                 logger.info("速度已是 4x")
 
         def auto_combat() -> bool:
-            context.tasker.controller.post_screencap().wait()
-            current_image = context.tasker.controller.cached_image
-            auto_res = context.run_recognition(
-                "UtilsOCR",
-                current_image,
-                pipeline_override={
-                    "UtilsOCR": {
-                        "recognition": {
-                            "pre_wait_freezes": 0,
-                            "param": {
-                                "roi": self.toolbar_roi,
-                                "expected": "OFF",
-                            }
-                        }
-                    }
-                },
+            # 交给流水线刷新截图、等待开关出现，并在点击后确认 ON。
+            result = context.run_task("Global.AutoCombat.Enable")
+            info_share.auto_combat_mode = (
+                act_mgr.task_succeeded(result) and not context.tasker.stopping
             )
-            if auto_res.best_result:
-                context.run_action(
-                    "UtilsClick",
-                    pipeline_override={
-                        "UtilsClick": {
-                            "pre_wait_freezes":{
-                                "time": 500,
-                                "target": [647,373,583,342],
-                                "threshold": 0.99,
-                                "timeout": 15000,
-                            },
-                            "action": {
-                                "param": {
-                                    "target": auto_res.best_result.box,
-                                }
-                            }
-                        }
-                    },
-                )
-                info_share.auto_combat_mode = True
-                logger.info("已开启自动战斗模式")
-                return True
+            if info_share.auto_combat_mode:
+                logger.info("已确认自动战斗模式开启")
             else:
-                on_res = context.run_recognition(
-                    "UtilsOCR",
-                    current_image,
-                    pipeline_override={
-                        "UtilsOCR": {
-                            "recognition": {
-                                "pre_wait_freezes": 0,
-                                "param": {
-                                    "roi": self.toolbar_roi,
-                                    "expected": "ON",
-                                }
-                            }
-                        }
-                    },
-                )
-                if on_res.best_result:
-                    info_share.auto_combat_mode = True
-                    logger.info("自动战斗模式已开启")
-                    return True
-
-                info_share.auto_combat_mode = False
-                logger.warning("无法识别自动战斗开关状态")
-                return False
+                logger.warning("未能确认自动战斗模式开启")
+            return info_share.auto_combat_mode
 
         def disable_auto_combat():
             result = context.run_task(

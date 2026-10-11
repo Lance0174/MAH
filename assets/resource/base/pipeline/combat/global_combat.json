@@ -156,6 +156,69 @@
             "Global.AutoCombat.Count"
         ]
     },
+    "Global.AutoCombat.Enable": {
+        "recognition": {
+            "type": "DirectHit"
+        },
+        "action": {
+            "type": "DoNothing"
+        },
+        "post_delay": 0,
+        "timeout": 30000,
+        "rate_limit": 500,
+        "next": [
+            "Global.AutoCombat.Enable.On",
+            "Global.AutoCombat.Enable.Off"
+        ]
+    },
+    "Global.AutoCombat.Enable.On": {
+        "recognition": {
+            "type": "OCR",
+            "param": {
+                "roi": [
+                    0,
+                    0,
+                    640,
+                    66
+                ],
+                "expected": [
+                    "^ON$"
+                ]
+            }
+        },
+        "action": {
+            "type": "DoNothing"
+        },
+        "post_delay": 0
+    },
+    "Global.AutoCombat.Enable.Off": {
+        "recognition": {
+            "type": "OCR",
+            "param": {
+                "roi": [
+                    0,
+                    0,
+                    640,
+                    66
+                ],
+                "expected": [
+                    "^OFF$"
+                ]
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": true
+            }
+        },
+        "post_delay": 500,
+        "timeout": 15000,
+        "rate_limit": 500,
+        "next": [
+            "Global.AutoCombat.Enable.On"
+        ]
+    },
     "Global.AutoCombat.Replay": {
         "recognition": {
             "type": "OCR",

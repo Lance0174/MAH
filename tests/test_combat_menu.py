@@ -27,7 +27,7 @@ class CombatMenuTests(unittest.TestCase):
         self.now = 0
         self.ctx.run_recognition.side_effect = self.recognize
         self.ctx.run_action.side_effect = self.click
-        self.ctx.run_task.side_effect = self.legacy_task
+        self.ctx.run_task.side_effect = self.run_task
         self.action._detect_complete = Mock(side_effect=self.complete)
 
     def complete(self, ctx):
@@ -76,7 +76,11 @@ class CombatMenuTests(unittest.TestCase):
             self.auto = 'ON'
         return NS(success=True)
 
-    def legacy_task(self, name, pipeline_override):
+    def run_task(self, name, pipeline_override=None):
+        if name == 'Global.AutoCombat.Enable':
+            # AUTO's scheduler behavior is exercised in test_auto_enable.py.
+            self.auto = 'ON'
+            return task_result(True)
         result = self.recognize(name, None, pipeline_override)
         if not result.best_result:
             return task_result(False)
@@ -96,6 +100,23 @@ class CombatMenuTests(unittest.TestCase):
         self.assertEqual(self.menu_attempts, 2)
         self.assertEqual(self.auto, 'ON')
         self.assertTrue(self.shared.combat_set)
+
+    def test_next_battle_skips_menu_but_still_runs_auto_pipeline(self):
+        self.shared.combat_set = True
+        self.assertTrue(self.run_battle())
+        self.ctx.run_task.assert_called_once_with('Global.AutoCombat.Enable')
+        self.ctx.tasker.controller.post_screencap.assert_not_called()
+        self.ctx.run_recognition.assert_not_called()
+        self.assertEqual(self.menu_attempts, 0)
+        self.assertTrue(self.shared.auto_combat_mode)
+
+    def test_failed_auto_pipeline_stops_before_waiting_for_battle_end(self):
+        self.shared.combat_set = True
+        self.ctx.run_task.side_effect = None
+        self.ctx.run_task.return_value = task_result(False)
+        self.assertFalse(self.run_battle())
+        self.assertFalse(self.shared.auto_combat_mode)
+        self.action._detect_complete.assert_not_called()
 
     def test_already_open_settings_with_all_on_needs_no_menu_or_tab_click(self):
         self.scene = 'settings'
